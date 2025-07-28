@@ -508,10 +508,28 @@
         </div>
     </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+
 <script>
+    // Firebase configuration - replace with your own!
+    const firebaseConfig = {
+    apiKey: "AIzaSyDJ09WwzJdgXt0QGhAzx6rUtHF1w9MyoAk",
+    authDomain: "verlanglijstje-b6c57.firebaseapp.com",
+    databaseURL: "https://verlanglijstje-b6c57-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "verlanglijstje-b6c57",
+    storageBucket: "verlanglijstje-b6c57.firebasestorage.app",
+    messagingSenderId: "750064793910",
+    appId: "1:750064793910:web:c0094bbe8311b7f9725b97",
+    measurementId: "G-SCEZTTMTX8"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
     // Configuratie
     const ADMIN_PASSWORD = "mijnwachtwoord";
-    const API_ENDPOINT = "api.php";
     
     // DOM elementen
     const elements = {
@@ -616,119 +634,88 @@
         }
         
         try {
-            const response = await fetch(API_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    action: 'add',
-                    item: {
-                        name: name,
-                        image: image,
-                        price: price,
-                        link: link
-                    }
-                })
+            const newItemRef = database.ref('wishlist').push();
+            await newItemRef.set({
+                name: name,
+                image: image,
+                price: price,
+                link: link || '',
+                purchaseCount: 0,
+                id: newItemRef.key
             });
             
-            if (!response.ok) {
-                throw new Error('Netwerkfout');
-            }
-            
-            const data = await response.json();
-            if (data.success) {
-                loadItems();
-                elements.itemName.value = '';
-                elements.itemImage.value = '';
-                elements.itemPrice.value = '';
-                elements.itemLink.value = '';
-            }
+            // Reset formulier
+            elements.itemName.value = '';
+            elements.itemImage.value = '';
+            elements.itemPrice.value = '';
+            elements.itemLink.value = '';
         } catch (error) {
             console.error('Fout bij toevoegen item:', error);
             alert('Er is een fout opgetreden bij het opslaan van het item');
         }
     }
     
-    // Items ophalen van server
-    async function fetchItems() {
-        try {
-            const response = await fetch(API_ENDPOINT + '?t=' + Date.now()); // Cache busting
-            if (!response.ok) {
-                throw new Error('Kon items niet laden');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Fout bij laden items:', error);
-            return [];
-        }
+    // Items ophalen van Firebase
+    function loadItems() {
+        database.ref('wishlist').on('value', (snapshot) => {
+            const items = [];
+            snapshot.forEach((childSnapshot) => {
+                items.push({
+                    id: childSnapshot.key,
+                    ...childSnapshot.val()
+                });
+            });
+            
+            renderItems(items);
+        });
     }
     
-    // Items laden en weergeven
-    async function loadItems() {
-        try {
-            const items = await fetchItems();
-            
-            if (items.length === 0) {
-                elements.wishlist.innerHTML = '';
-                elements.wishlist.appendChild(elements.emptyState);
-                elements.emptyState.style.display = 'block';
-                return;
-            }
-            
+    // Items weergeven
+    function renderItems(items) {
+        if (items.length === 0) {
             elements.wishlist.innerHTML = '';
-            
-            items.forEach((item) => {
-                const hasPurchases = item.purchaseCount > 0;
-                const itemElement = document.createElement('div');
-                itemElement.className = `item-card ${hasPurchases ? 'has-purchases' : ''}`;
-                itemElement.innerHTML = `
-                    <div class="item-image-container">
-                        <img src="${item.image}" alt="${item.name}" class="item-image" onerror="this.src='https://via.placeholder.com/400?text=Geen+afbeelding'">
-                        ${hasPurchases ? `<div class="purchase-count">${item.purchaseCount} ${item.purchaseCount === 1 ? 'persoon' : 'personen'}</div>` : ''}
-                        <div class="admin-actions">
-                            <button class="delete-btn" onclick="deleteItem(${item.id}, event)" title="Verwijderen">
-                                ✕
-                            </button>
-                        </div>
-                    </div>
-                    <div class="item-content">
-                        <h3 class="item-title">${item.name}</h3>
-                        <div class="item-price">€${item.price.toFixed(2)}</div>
-                        <div class="item-actions">
-                            <button class="btn purchase-btn" onclick="incrementPurchaseCount(${item.id})">+1 Koper</button>
-                            ${hasPurchases ? `<button class="btn unpurchase-btn" onclick="decrementPurchaseCount(${item.id})">-1 Koper</button>` : ''}
-                            <a href="${item.link || '#'}" target="_blank" class="btn btn-link ${!item.link ? 'hidden' : ''}">Bekijk</a>
-                        </div>
-                    </div>
-                `;
-                elements.wishlist.appendChild(itemElement);
-            });
-        } catch (error) {
-            console.error('Fout bij laden items:', error);
+            elements.wishlist.appendChild(elements.emptyState);
+            elements.emptyState.style.display = 'block';
+            return;
         }
+        
+        elements.wishlist.innerHTML = '';
+        
+        items.forEach((item) => {
+            const hasPurchases = item.purchaseCount > 0;
+            const itemElement = document.createElement('div');
+            itemElement.className = `item-card ${hasPurchases ? 'has-purchases' : ''}`;
+            itemElement.innerHTML = `
+                <div class="item-image-container">
+                    <img src="${item.image}" alt="${item.name}" class="item-image" onerror="this.src='https://via.placeholder.com/400?text=Geen+afbeelding'">
+                    ${hasPurchases ? `<div class="purchase-count">${item.purchaseCount} ${item.purchaseCount === 1 ? 'persoon' : 'personen'}</div>` : ''}
+                    <div class="admin-actions">
+                        <button class="delete-btn" onclick="deleteItem('${item.id}', event)" title="Verwijderen">
+                            ✕
+                        </button>
+                    </div>
+                </div>
+                <div class="item-content">
+                    <h3 class="item-title">${item.name}</h3>
+                    <div class="item-price">€${item.price.toFixed(2)}</div>
+                    <div class="item-actions">
+                        <button class="btn purchase-btn" onclick="incrementPurchaseCount('${item.id}')">+1 Koper</button>
+                        ${hasPurchases ? `<button class="btn unpurchase-btn" onclick="decrementPurchaseCount('${item.id}', event)">-1 Koper</button>` : ''}
+                        <a href="${item.link || '#'}" target="_blank" class="btn btn-link ${!item.link ? 'hidden' : ''}">Bekijk</a>
+                    </div>
+                </div>
+            `;
+            elements.wishlist.appendChild(itemElement);
+        });
     }
     
     // Koopteller verhogen
     async function incrementPurchaseCount(id) {
         try {
-            const response = await fetch(API_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    action: 'increment',
-                    id: id
-                })
-            });
-            
-            if (!response.ok) throw new Error('Netwerkfout');
-            
-            const data = await response.json();
-            if (data.success) {
-                loadItems();
-            }
+            const itemRef = database.ref(`wishlist/${id}`);
+            const snapshot = await itemRef.once('value');
+            const currentCount = snapshot.val().purchaseCount || 0;
+            await itemRef.update({ purchaseCount: currentCount + 1 });
         } catch (error) {
             console.error('Fout bij verhogen koopteller:', error);
         }
@@ -739,22 +726,11 @@
         if (event) event.stopPropagation();
         
         try {
-            const response = await fetch(API_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    action: 'decrement',
-                    id: id
-                })
-            });
-            
-            if (!response.ok) throw new Error('Netwerkfout');
-            
-            const data = await response.json();
-            if (data.success) {
-                loadItems();
+            const itemRef = database.ref(`wishlist/${id}`);
+            const snapshot = await itemRef.once('value');
+            const currentCount = snapshot.val().purchaseCount || 0;
+            if (currentCount > 0) {
+                await itemRef.update({ purchaseCount: currentCount - 1 });
             }
         } catch (error) {
             console.error('Fout bij verlagen koopteller:', error);
@@ -772,53 +748,19 @@
         }
         
         try {
-            const response = await fetch(API_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    action: 'delete',
-                    id: id
-                })
-            });
-            
-            if (!response.ok) throw new Error('Netwerkfout');
-            
-            const data = await response.json();
-            if (data.success) {
-                loadItems();
-            }
+            await database.ref(`wishlist/${id}`).remove();
         } catch (error) {
             console.error('Fout bij verwijderen item:', error);
         }
     }
 
-    // Item bewerken (optioneel)
+    // Item bewerken
     async function editItem(id, newData) {
         if (!isAdmin) return;
         
         try {
-            const response = await fetch(API_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    action: 'edit',
-                    id: id,
-                    newData: newData
-                })
-            });
-            
-            if (!response.ok) throw new Error('Netwerkfout');
-            
-            const data = await response.json();
-            if (data.success) {
-                loadItems();
-                return true;
-            }
-            return false;
+            await database.ref(`wishlist/${id}`).update(newData);
+            return true;
         } catch (error) {
             console.error('Fout bij bewerken item:', error);
             return false;
