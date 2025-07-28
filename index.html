@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mijn Verlanglijstje</title>
+    <style>
+        :root {
+            --accent: #2563eb;
+            --accent-dark: #1d4ed8;
+            --accent-light: #93c5fd;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            position: relative;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: var(--text-light);
+            font-weight: 400;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .admin-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: var(--accent);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: none;
+        }
+        
+        .admin-badge.active {
+            display: block;
+        }
+        
+        .add-item-form {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            display: none;
+        }
+        
+        .add-item-form.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .form-title {
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent);
+            text-align: center;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+        
+        input {
+            padding: 0.75rem 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            background: var(--card-bg);
+            color: var(--text);
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-light);
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--accent);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--accent-dark);
+            transform: translateY(-1px);
+        }
+        
+        .btn-block {
+            width: 100%;
+        }
+        
+        .wishlist {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .item-card {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .item-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        }
+        
+        .item-image-container {
+            height: 180px;
+            overflow: hidden;
+            position: relative;
+            background: #f1f5f9;
+        }
+        
+        .item-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .item-content {
+            padding: 1.25rem;
+        }
+        
+        .item-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .item-price {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1.25rem;
+        }
+        
+        .item-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+        
+        .btn-link {
+            flex: 1;
+            text-align: center;
+            text-decoration: none;
+            background-color: var(--accent);
+            color: white;
+            transition: opacity 0.2s ease;
+        }
+        
+        .btn-link:hover {
+            background-color: var(--accent-dark);
+        }
+        
+        .btn-link.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .admin-actions {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            display: none;
+            gap: 0.5rem;
+        }
+        
+        .admin-mode .admin-actions {
+            display: flex;
+        }
+        
+        .delete-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            color: var(--danger);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .delete-btn:hover {
+            background: var(--danger);
+            color: white;
+            transform: scale(1.1);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-light);
+            grid-column: 1 / -1;
+            background: var(--card-bg);
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px dashed #cbd5e1;
+        }
+        
+        .empty-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #cbd5e1;
+        }
+        
+        .login-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+        
+        .login-btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .login-btn:hover {
+            background-color: var(--accent-dark);
+            transform: translateY(-1px);
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1.5rem 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .admin-badge {
+                position: static;
+                margin-top: 1rem;
+                display: inline-block;
+            }
+            
+            .admin-badge.active {
+                display: inline-block;
+            }
+            
+            .add-item-form {
+                padding: 1.5rem;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Mijn Verlanglijst</h1>
+            <p class="subtitle">Deel wat je graag zou willen hebben</p>
+            <div id="adminBadge" class="admin-badge">Beheermodus</div>
+        </header>
+        
+        <div id="loginContainer" class="login-container">
+            <button id="loginBtn" class="login-btn">Beheermodus openen</button>
+        </div>
+        
+        <div id="addItemForm" class="add-item-form">
+            <h2 class="form-title">Nieuw item toevoegen</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="itemName">Productnaam</label>
+                    <input type="text" id="itemName" placeholder="Bijv. Draadloze oortjes" required>
+                </div>
+                <div class="form-group">
+                    <label for="itemImage">Afbeeldings-URL</label>
+                    <input type="text" id="itemImage" placeholder="https://voorbeeld.com/foto.jpg" required>
+                </div>
+                <div class="form-group">
+                    <label for="itemPrice">Prijs (€)</label>
+                    <input type="number" id="itemPrice" placeholder="99.99" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="itemLink">Productlink (optioneel)</label>
+                    <input type="text" id="itemLink" placeholder="https://voorbeeld.com/product">
+                </div>
+            </div>
+            <button class="btn btn-primary btn-block" onclick="addItem()">
+                Item toevoegen
+            </button>
+        </div>
+        
+        <div class="wishlist" id="wishlist">
+            <!-- Items worden hier dynamisch toegevoegd -->
+            <div class="empty-state" id="emptyState">
+                <div class="empty-icon">🎁</div>
+                <h3>Nog geen items</h3>
+                <p>Voeg items toe in beheermodus</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuratie
+        const ADMIN_PASSWORD = "mijnwachtwoord"; // Verander dit!
+        
+        // DOM elementen
+        const elements = {
+            adminBadge: document.getElementById('adminBadge'),
+            addItemForm: document.getElementById('addItemForm'),
+            loginContainer: document.getElementById('loginContainer'),
+            loginBtn: document.getElementById('loginBtn'),
+            wishlist: document.getElementById('wishlist'),
+            emptyState: document.getElementById('emptyState'),
+            itemName: document.getElementById('itemName'),
+            itemImage: document.getElementById('itemImage'),
+            itemPrice: document.getElementById('itemPrice'),
+            itemLink: document.getElementById('itemLink')
+        };
+        
+        // Status
+        let isAdmin = localStorage.getItem('wishlistAdmin') === 'true';
+        
+        // Initialiseer de UI
+        function initUI() {
+            if (isAdmin) {
+                elements.adminBadge.classList.add('active');
+                elements.addItemForm.classList.add('active');
+                elements.loginContainer.style.display = 'none';
+                elements.wishlist.classList.add('admin-mode');
+                elements.loginBtn.textContent = 'Beheermodus afsluiten';
+            } else {
+                elements.adminBadge.classList.remove('active');
+                elements.addItemForm.classList.remove('active');
+                elements.loginContainer.style.display = 'flex';
+                elements.wishlist.classList.remove('admin-mode');
+                elements.loginBtn.textContent = 'Beheermodus openen';
+            }
+            
+            loadItems();
+        }
+        
+        // Login/logout functionaliteit
+        elements.loginBtn.addEventListener('click', function() {
+            if (isAdmin) {
+                // Uitloggen
+                isAdmin = false;
+                localStorage.removeItem('wishlistAdmin');
+            } else {
+                // Inloggen
+                const password = prompt('Voer het wachtwoord in voor beheermodus:');
+                if (password === ADMIN_PASSWORD) {
+                    isAdmin = true;
+                    localStorage.setItem('wishlistAdmin', 'true');
+                } else if (password !== null) {
+                    alert('Ongeldig wachtwoord');
+                    return;
+                } else {
+                    return;
+                }
+            }
+            
+            initUI();
+        });
+        
+        // Laad items bij het opstarten
+        document.addEventListener('DOMContentLoaded', initUI);
+
+        // Item toevoegen
+        function addItem() {
+            if (!isAdmin) return;
+            
+            const name = elements.itemName.value.trim();
+            const image = elements.itemImage.value.trim();
+            const price = parseFloat(elements.itemPrice.value);
+            const link = elements.itemLink.value.trim();
+            
+            // Validatie
+            if (!name || !image || isNaN(price)) {
+                alert('Vul alle verplichte velden in!');
+                return;
+            }
+            
+            if (!image.startsWith('http')) {
+                alert('Voer een geldige afbeeldings-URL in');
+                return;
+            }
+            
+            const item = {
+                name: name,
+                image: image,
+                price: price,
+                link: link,
+                id: Date.now() // Unieke ID
+            };
+            
+            // Items ophalen of nieuwe array maken
+            let items = JSON.parse(localStorage.getItem('wishlistItems')) || [];
+            items.push(item);
+            localStorage.setItem('wishlistItems', JSON.stringify(items));
+            
+            loadItems();
+            
+            // Formulier resetten
+            elements.itemName.value = '';
+            elements.itemImage.value = '';
+            elements.itemPrice.value = '';
+            elements.itemLink.value = '';
+        }
+        
+        // Items laden
+        function loadItems() {
+            const items = JSON.parse(localStorage.getItem('wishlistItems')) || [];
+            
+            // Toon lege staat als er geen items zijn
+            if (items.length === 0) {
+                elements.wishlist.innerHTML = '';
+                elements.wishlist.appendChild(elements.emptyState);
+                elements.emptyState.style.display = 'block';
+                return;
+            }
+            
+            // Bouw de wishlist op
+            elements.wishlist.innerHTML = '';
+            
+            items.forEach((item) => {
+                const itemElement = document.createElement('div');
+                itemElement.className = 'item-card';
+                itemElement.innerHTML = `
+                    <div class="item-image-container">
+                        <img src="${item.image}" alt="${item.name}" class="item-image" onerror="this.src='https://via.placeholder.com/400x200?text=Geen+afbeelding'">
+                        <div class="admin-actions">
+                            <button class="delete-btn" onclick="deleteItem(${item.id}, event)" title="Verwijderen">
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+                    <div class="item-content">
+                        <h3 class="item-title">${item.name}</h3>
+                        <div class="item-price">€${item.price.toFixed(2)}</div>
+                        <div class="item-actions">
+                            <a href="${item.link || '#'}" target="_blank" class="btn btn-link ${!item.link ? 'hidden' : ''}">Bekijk</a>
+                        </div>
+                    </div>
+                `;
+                elements.wishlist.appendChild(itemElement);
+            });
+        }
+        
+        // Item verwijderen
+        function deleteItem(id, event) {
+            if (!isAdmin) return;
+            
+            event.stopPropagation();
+            
+            if (!confirm('Weet je zeker dat je dit item wilt verwijderen?')) {
+                return;
+            }
+            
+            let items = JSON.parse(localStorage.getItem('wishlistItems')) || [];
+            items = items.filter(item => item.id !== id);
+            localStorage.setItem('wishlistItems', JSON.stringify(items));
+            loadItems();
+        }
+    </script>
+</body>
+</html>
