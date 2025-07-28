@@ -262,12 +262,13 @@
         }
         
         .item-image-container {
-            height: 180px;
+            aspect-ratio: 1 / 1;
+            width: 100%; 
+            background: #f1f5f9;
             overflow: hidden;
             position: relative;
-            background: #f1f5f9;
         }
-        
+
         .item-image {
             width: 100%;
             height: 100%;
@@ -457,7 +458,7 @@
     <div class="container">
         <header>
             <h1>Mijn Verlanglijst</h1>
-            <p class="subtitle">Deel wat je graag zou willen hebben</p>
+            <p class="subtitle">Wat ik wil voor mijn verjaardag</p>
             <div id="adminBadge" class="admin-badge">Beheermodus</div>
         </header>
         
@@ -507,140 +508,167 @@
         </div>
     </div>
 
-    <script>
-        // Configuratie
-        const ADMIN_PASSWORD = "mijnwachtwoord"; // Verander dit!
-        
-        // DOM elementen
-        const elements = {
-            adminBadge: document.getElementById('adminBadge'),
-            addItemForm: document.getElementById('addItemForm'),
-            loginContainer: document.getElementById('loginContainer'),
-            loginBtn: document.getElementById('loginBtn'),
-            wishlist: document.getElementById('wishlist'),
-            emptyState: document.getElementById('emptyState'),
-            itemName: document.getElementById('itemName'),
-            itemImage: document.getElementById('itemImage'),
-            itemPrice: document.getElementById('itemPrice'),
-            itemLink: document.getElementById('itemLink'),
-            togglePurchased: document.getElementById('togglePurchased')
-        };
-        
-        // Status
-        let isAdmin = localStorage.getItem('wishlistAdmin') === 'true';
-        let showPurchased = localStorage.getItem('showPurchased') === 'true';
-        
-        // Initialiseer de UI
-        function initUI() {
-            if (isAdmin) {
-                elements.adminBadge.classList.add('active');
-                elements.addItemForm.classList.add('active');
-                elements.loginBtn.textContent = 'Beheermodus afsluiten';
-                elements.wishlist.classList.add('admin-mode');
-            } else {
-                elements.adminBadge.classList.remove('active');
-                elements.addItemForm.classList.remove('active');
-                elements.loginBtn.textContent = 'Beheermodus openen';
-                elements.wishlist.classList.remove('admin-mode');
-            }
-            
-            // Stel de toggle in
-            elements.togglePurchased.checked = showPurchased;
-            updatePurchasedVisibility();
-            
-            loadItems();
+<script>
+    // Configuratie
+    const ADMIN_PASSWORD = "mijnwachtwoord";
+    const API_ENDPOINT = "api.php";
+    
+    // DOM elementen
+    const elements = {
+        adminBadge: document.getElementById('adminBadge'),
+        addItemForm: document.getElementById('addItemForm'),
+        loginContainer: document.getElementById('loginContainer'),
+        loginBtn: document.getElementById('loginBtn'),
+        wishlist: document.getElementById('wishlist'),
+        emptyState: document.getElementById('emptyState'),
+        itemName: document.getElementById('itemName'),
+        itemImage: document.getElementById('itemImage'),
+        itemPrice: document.getElementById('itemPrice'),
+        itemLink: document.getElementById('itemLink'),
+        togglePurchased: document.getElementById('togglePurchased')
+    };
+    
+    // Status
+    let isAdmin = localStorage.getItem('wishlistAdmin') === 'true';
+    let showPurchased = localStorage.getItem('showPurchased') === 'true';
+    
+    // Initialiseer de UI
+    function initUI() {
+        if (isAdmin) {
+            elements.adminBadge.classList.add('active');
+            elements.addItemForm.classList.add('active');
+            elements.loginBtn.textContent = 'Beheermodus afsluiten';
+            elements.wishlist.classList.add('admin-mode');
+        } else {
+            elements.adminBadge.classList.remove('active');
+            elements.addItemForm.classList.remove('active');
+            elements.loginBtn.textContent = 'Beheermodus openen';
+            elements.wishlist.classList.remove('admin-mode');
         }
         
-        // Update zichtbaarheid gekochte items
-        function updatePurchasedVisibility() {
-            if (showPurchased) {
-                document.body.classList.add('show-purchased');
+        // Stel de toggle in
+        elements.togglePurchased.checked = showPurchased;
+        updatePurchasedVisibility();
+        
+        loadItems();
+    }
+    
+    // Update zichtbaarheid gekochte items
+    function updatePurchasedVisibility() {
+        if (showPurchased) {
+            document.body.classList.add('show-purchased');
+        } else {
+            document.body.classList.remove('show-purchased');
+        }
+    }
+    
+    // Toggle gekochte items
+    elements.togglePurchased.addEventListener('change', function() {
+        showPurchased = this.checked;
+        localStorage.setItem('showPurchased', showPurchased);
+        updatePurchasedVisibility();
+    });
+    
+    // Login/logout functionaliteit
+    elements.loginBtn.addEventListener('click', function() {
+        if (isAdmin) {
+            // Uitloggen
+            isAdmin = false;
+            localStorage.removeItem('wishlistAdmin');
+        } else {
+            // Inloggen
+            const password = prompt('Voer het wachtwoord in voor beheermodus:');
+            if (password === ADMIN_PASSWORD) {
+                isAdmin = true;
+                localStorage.setItem('wishlistAdmin', 'true');
+            } else if (password !== null) {
+                alert('Ongeldig wachtwoord');
+                return;
             } else {
-                document.body.classList.remove('show-purchased');
+                return;
             }
         }
         
-        // Toggle gekochte items
-        elements.togglePurchased.addEventListener('change', function() {
-            showPurchased = this.checked;
-            localStorage.setItem('showPurchased', showPurchased);
-            updatePurchasedVisibility();
-        });
-        
-        // Login/logout functionaliteit
-        elements.loginBtn.addEventListener('click', function() {
-            if (isAdmin) {
-                // Uitloggen
-                isAdmin = false;
-                localStorage.removeItem('wishlistAdmin');
-            } else {
-                // Inloggen
-                const password = prompt('Voer het wachtwoord in voor beheermodus:');
-                if (password === ADMIN_PASSWORD) {
-                    isAdmin = true;
-                    localStorage.setItem('wishlistAdmin', 'true');
-                } else if (password !== null) {
-                    alert('Ongeldig wachtwoord');
-                    return;
-                } else {
-                    return;
-                }
-            }
-            
-            initUI();
-        });
-        
-        // Laad items bij het opstarten
-        document.addEventListener('DOMContentLoaded', initUI);
+        initUI();
+    });
+    
+    // Laad items bij het opstarten
+    document.addEventListener('DOMContentLoaded', initUI);
 
-        // Item toevoegen
-        function addItem() {
-            if (!isAdmin) return;
-            
-            const name = elements.itemName.value.trim();
-            const image = elements.itemImage.value.trim();
-            const price = parseFloat(elements.itemPrice.value);
-            const link = elements.itemLink.value.trim();
-            
-            // Validatie
-            if (!name || !image || isNaN(price)) {
-                alert('Vul alle verplichte velden in!');
-                return;
-            }
-            
-            if (!image.startsWith('http')) {
-                alert('Voer een geldige afbeeldings-URL in');
-                return;
-            }
-            
-            const item = {
-                name: name,
-                image: image,
-                price: price,
-                link: link,
-                id: Date.now(), // Unieke ID
-                purchaseCount: 0
-            };
-            
-            // Items ophalen of nieuwe array maken
-            let items = JSON.parse(localStorage.getItem('wishlistItems')) || [];
-            items.push(item);
-            localStorage.setItem('wishlistItems', JSON.stringify(items));
-            
-            loadItems();
-            
-            // Formulier resetten
-            elements.itemName.value = '';
-            elements.itemImage.value = '';
-            elements.itemPrice.value = '';
-            elements.itemLink.value = '';
+    // Item toevoegen
+    async function addItem() {
+        if (!isAdmin) return;
+        
+        const name = elements.itemName.value.trim();
+        const image = elements.itemImage.value.trim();
+        const price = parseFloat(elements.itemPrice.value);
+        const link = elements.itemLink.value.trim();
+        
+        // Validatie
+        if (!name || !image || isNaN(price)) {
+            alert('Vul alle verplichte velden in!');
+            return;
         }
         
-        // Items laden
-        function loadItems() {
-            const items = JSON.parse(localStorage.getItem('wishlistItems')) || [];
+        if (!image.startsWith('http')) {
+            alert('Voer een geldige afbeeldings-URL in');
+            return;
+        }
+        
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'add',
+                    item: {
+                        name: name,
+                        image: image,
+                        price: price,
+                        link: link
+                    }
+                })
+            });
             
-            // Toon lege staat als er geen items zijn
+            if (!response.ok) {
+                throw new Error('Netwerkfout');
+            }
+            
+            const data = await response.json();
+            if (data.success) {
+                loadItems();
+                elements.itemName.value = '';
+                elements.itemImage.value = '';
+                elements.itemPrice.value = '';
+                elements.itemLink.value = '';
+            }
+        } catch (error) {
+            console.error('Fout bij toevoegen item:', error);
+            alert('Er is een fout opgetreden bij het opslaan van het item');
+        }
+    }
+    
+    // Items ophalen van server
+    async function fetchItems() {
+        try {
+            const response = await fetch(API_ENDPOINT + '?t=' + Date.now()); // Cache busting
+            if (!response.ok) {
+                throw new Error('Kon items niet laden');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Fout bij laden items:', error);
+            return [];
+        }
+    }
+    
+    // Items laden en weergeven
+    async function loadItems() {
+        try {
+            const items = await fetchItems();
+            
             if (items.length === 0) {
                 elements.wishlist.innerHTML = '';
                 elements.wishlist.appendChild(elements.emptyState);
@@ -648,7 +676,6 @@
                 return;
             }
             
-            // Bouw de wishlist op
             elements.wishlist.innerHTML = '';
             
             items.forEach((item) => {
@@ -657,7 +684,7 @@
                 itemElement.className = `item-card ${hasPurchases ? 'has-purchases' : ''}`;
                 itemElement.innerHTML = `
                     <div class="item-image-container">
-                        <img src="${item.image}" alt="${item.name}" class="item-image" onerror="this.src='https://via.placeholder.com/400x200?text=Geen+afbeelding'">
+                        <img src="${item.image}" alt="${item.name}" class="item-image" onerror="this.src='https://via.placeholder.com/400?text=Geen+afbeelding'">
                         ${hasPurchases ? `<div class="purchase-count">${item.purchaseCount} ${item.purchaseCount === 1 ? 'persoon' : 'personen'}</div>` : ''}
                         <div class="admin-actions">
                             <button class="delete-btn" onclick="deleteItem(${item.id}, event)" title="Verwijderen">
@@ -677,59 +704,159 @@
                 `;
                 elements.wishlist.appendChild(itemElement);
             });
+        } catch (error) {
+            console.error('Fout bij laden items:', error);
         }
-        
-        // Koopteller verhogen
-        function incrementPurchaseCount(id) {
-            let items = JSON.parse(localStorage.getItem('wishlistItems')) || [];
-            items = items.map(item => {
-                if (item.id === id) {
-                    return {
-                        ...item,
-                        purchaseCount: (item.purchaseCount || 0) + 1
-                    };
-                }
-                return item;
+    }
+    
+    // Koopteller verhogen
+    async function incrementPurchaseCount(id) {
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'increment',
+                    id: id
+                })
             });
             
-            localStorage.setItem('wishlistItems', JSON.stringify(items));
-            loadItems();
-        }
-        
-        // Koopteller verlagen
-        function decrementPurchaseCount(id, event) {
-            if (event) event.stopPropagation();
+            if (!response.ok) throw new Error('Netwerkfout');
             
-            let items = JSON.parse(localStorage.getItem('wishlistItems')) || [];
-            items = items.map(item => {
-                if (item.id === id && item.purchaseCount > 0) {
-                    return {
-                        ...item,
-                        purchaseCount: item.purchaseCount - 1
-                    };
-                }
-                return item;
-            });
-            
-            localStorage.setItem('wishlistItems', JSON.stringify(items));
-            loadItems();
-        }
-        
-        // Item verwijderen
-        function deleteItem(id, event) {
-            if (!isAdmin) return;
-            
-            event.stopPropagation();
-            
-            if (!confirm('Weet je zeker dat je dit item wilt verwijderen?')) {
-                return;
+            const data = await response.json();
+            if (data.success) {
+                loadItems();
             }
-            
-            let items = JSON.parse(localStorage.getItem('wishlistItems')) || [];
-            items = items.filter(item => item.id !== id);
-            localStorage.setItem('wishlistItems', JSON.stringify(items));
-            loadItems();
+        } catch (error) {
+            console.error('Fout bij verhogen koopteller:', error);
         }
-    </script>
+    }
+    
+    // Koopteller verlagen
+    async function decrementPurchaseCount(id, event) {
+        if (event) event.stopPropagation();
+        
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'decrement',
+                    id: id
+                })
+            });
+            
+            if (!response.ok) throw new Error('Netwerkfout');
+            
+            const data = await response.json();
+            if (data.success) {
+                loadItems();
+            }
+        } catch (error) {
+            console.error('Fout bij verlagen koopteller:', error);
+        }
+    }
+    
+    // Item verwijderen
+    async function deleteItem(id, event) {
+        if (!isAdmin) return;
+        
+        event.stopPropagation();
+        
+        if (!confirm('Weet je zeker dat je dit item wilt verwijderen?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'delete',
+                    id: id
+                })
+            });
+            
+            if (!response.ok) throw new Error('Netwerkfout');
+            
+            const data = await response.json();
+            if (data.success) {
+                loadItems();
+            }
+        } catch (error) {
+            console.error('Fout bij verwijderen item:', error);
+        }
+    }
+
+    // Item bewerken (optioneel)
+    async function editItem(id, newData) {
+        if (!isAdmin) return;
+        
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'edit',
+                    id: id,
+                    newData: newData
+                })
+            });
+            
+            if (!response.ok) throw new Error('Netwerkfout');
+            
+            const data = await response.json();
+            if (data.success) {
+                loadItems();
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Fout bij bewerken item:', error);
+            return false;
+        }
+    }
+
+    // Open edit modal (voorbeeld)
+    function openEditModal(item) {
+        if (!isAdmin) return;
+        
+        // Vul formulier met bestaande data
+        elements.itemName.value = item.name;
+        elements.itemImage.value = item.image;
+        elements.itemPrice.value = item.price;
+        elements.itemLink.value = item.link || '';
+        
+        // Verander de knop tekst en functionaliteit
+        const submitBtn = elements.addItemForm.querySelector('.btn-primary');
+        submitBtn.textContent = 'Item bijwerken';
+        submitBtn.onclick = async function() {
+            const newData = {
+                name: elements.itemName.value.trim(),
+                image: elements.itemImage.value.trim(),
+                price: parseFloat(elements.itemPrice.value),
+                link: elements.itemLink.value.trim()
+            };
+            
+            if (await editItem(item.id, newData)) {
+                // Reset formulier
+                submitBtn.textContent = 'Item toevoegen';
+                submitBtn.onclick = addItem;
+                elements.itemName.value = '';
+                elements.itemImage.value = '';
+                elements.itemPrice.value = '';
+                elements.itemLink.value = '';
+            }
+        };
+    }
+</script>
 </body>
 </html>
