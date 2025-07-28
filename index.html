@@ -15,6 +15,7 @@
             --text-light: #64748b;
             --danger: #ef4444;
             --success: #10b981;
+            --purchased: #d1fae5;
         }
         
         * {
@@ -72,6 +73,72 @@
         
         .admin-badge.active {
             display: block;
+        }
+        
+        .toggle-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+        
+        .toggle-label {
+            font-size: 0.875rem;
+            color: var(--text-light);
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: var(--accent);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .login-container {
+            display: flex;
+            justify-content: center;
+            margin: 2rem 0;
+            gap: 1rem;
+            flex-wrap: wrap;
         }
         
         .add-item-form {
@@ -184,6 +251,11 @@
             border: 1px solid #e2e8f0;
         }
         
+        .show-purchased .item-card.has-purchases {
+            background-color: var(--purchased);
+            border-color: var(--success);
+        }
+        
         .item-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
@@ -224,6 +296,23 @@
             margin-bottom: 1.25rem;
         }
         
+        .purchase-count {
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
+            background-color: var(--success);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: none;
+        }
+        
+        .show-purchased .purchase-count {
+            display: block;
+        }
+        
         .item-actions {
             display: flex;
             gap: 0.75rem;
@@ -245,6 +334,28 @@
         .btn-link.hidden {
             opacity: 0;
             pointer-events: none;
+        }
+        
+        .purchase-btn {
+            flex: 1;
+            text-align: center;
+            background-color: var(--success);
+            color: white;
+        }
+        
+        .purchase-btn:hover {
+            background-color: #0d9c6e;
+        }
+        
+        .unpurchase-btn {
+            flex: 1;
+            text-align: center;
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        .unpurchase-btn:hover {
+            background-color: #d11464;
         }
         
         .admin-actions {
@@ -295,12 +406,6 @@
             font-size: 2.5rem;
             margin-bottom: 1rem;
             color: #cbd5e1;
-        }
-        
-        .login-container {
-            display: flex;
-            justify-content: center;
-            margin-top: 2rem;
         }
         
         .login-btn {
@@ -358,6 +463,13 @@
         
         <div id="loginContainer" class="login-container">
             <button id="loginBtn" class="login-btn">Beheermodus openen</button>
+            <div class="toggle-container">
+                <span class="toggle-label">Toon gekochte items</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="togglePurchased">
+                    <span class="slider"></span>
+                </label>
+            </div>
         </div>
         
         <div id="addItemForm" class="add-item-form">
@@ -410,30 +522,50 @@
             itemName: document.getElementById('itemName'),
             itemImage: document.getElementById('itemImage'),
             itemPrice: document.getElementById('itemPrice'),
-            itemLink: document.getElementById('itemLink')
+            itemLink: document.getElementById('itemLink'),
+            togglePurchased: document.getElementById('togglePurchased')
         };
         
         // Status
         let isAdmin = localStorage.getItem('wishlistAdmin') === 'true';
+        let showPurchased = localStorage.getItem('showPurchased') === 'true';
         
         // Initialiseer de UI
         function initUI() {
             if (isAdmin) {
                 elements.adminBadge.classList.add('active');
                 elements.addItemForm.classList.add('active');
-                elements.loginContainer.style.display = 'none';
-                elements.wishlist.classList.add('admin-mode');
                 elements.loginBtn.textContent = 'Beheermodus afsluiten';
+                elements.wishlist.classList.add('admin-mode');
             } else {
                 elements.adminBadge.classList.remove('active');
                 elements.addItemForm.classList.remove('active');
-                elements.loginContainer.style.display = 'flex';
-                elements.wishlist.classList.remove('admin-mode');
                 elements.loginBtn.textContent = 'Beheermodus openen';
+                elements.wishlist.classList.remove('admin-mode');
             }
+            
+            // Stel de toggle in
+            elements.togglePurchased.checked = showPurchased;
+            updatePurchasedVisibility();
             
             loadItems();
         }
+        
+        // Update zichtbaarheid gekochte items
+        function updatePurchasedVisibility() {
+            if (showPurchased) {
+                document.body.classList.add('show-purchased');
+            } else {
+                document.body.classList.remove('show-purchased');
+            }
+        }
+        
+        // Toggle gekochte items
+        elements.togglePurchased.addEventListener('change', function() {
+            showPurchased = this.checked;
+            localStorage.setItem('showPurchased', showPurchased);
+            updatePurchasedVisibility();
+        });
         
         // Login/logout functionaliteit
         elements.loginBtn.addEventListener('click', function() {
@@ -486,7 +618,8 @@
                 image: image,
                 price: price,
                 link: link,
-                id: Date.now() // Unieke ID
+                id: Date.now(), // Unieke ID
+                purchaseCount: 0
             };
             
             // Items ophalen of nieuwe array maken
@@ -519,11 +652,13 @@
             elements.wishlist.innerHTML = '';
             
             items.forEach((item) => {
+                const hasPurchases = item.purchaseCount > 0;
                 const itemElement = document.createElement('div');
-                itemElement.className = 'item-card';
+                itemElement.className = `item-card ${hasPurchases ? 'has-purchases' : ''}`;
                 itemElement.innerHTML = `
                     <div class="item-image-container">
                         <img src="${item.image}" alt="${item.name}" class="item-image" onerror="this.src='https://via.placeholder.com/400x200?text=Geen+afbeelding'">
+                        ${hasPurchases ? `<div class="purchase-count">${item.purchaseCount} ${item.purchaseCount === 1 ? 'persoon' : 'personen'}</div>` : ''}
                         <div class="admin-actions">
                             <button class="delete-btn" onclick="deleteItem(${item.id}, event)" title="Verwijderen">
                                 ✕
@@ -534,12 +669,50 @@
                         <h3 class="item-title">${item.name}</h3>
                         <div class="item-price">€${item.price.toFixed(2)}</div>
                         <div class="item-actions">
+                            <button class="btn purchase-btn" onclick="incrementPurchaseCount(${item.id})">+1 Koper</button>
+                            ${hasPurchases ? `<button class="btn unpurchase-btn" onclick="decrementPurchaseCount(${item.id})">-1 Koper</button>` : ''}
                             <a href="${item.link || '#'}" target="_blank" class="btn btn-link ${!item.link ? 'hidden' : ''}">Bekijk</a>
                         </div>
                     </div>
                 `;
                 elements.wishlist.appendChild(itemElement);
             });
+        }
+        
+        // Koopteller verhogen
+        function incrementPurchaseCount(id) {
+            let items = JSON.parse(localStorage.getItem('wishlistItems')) || [];
+            items = items.map(item => {
+                if (item.id === id) {
+                    return {
+                        ...item,
+                        purchaseCount: (item.purchaseCount || 0) + 1
+                    };
+                }
+                return item;
+            });
+            
+            localStorage.setItem('wishlistItems', JSON.stringify(items));
+            loadItems();
+        }
+        
+        // Koopteller verlagen
+        function decrementPurchaseCount(id, event) {
+            if (event) event.stopPropagation();
+            
+            let items = JSON.parse(localStorage.getItem('wishlistItems')) || [];
+            items = items.map(item => {
+                if (item.id === id && item.purchaseCount > 0) {
+                    return {
+                        ...item,
+                        purchaseCount: item.purchaseCount - 1
+                    };
+                }
+                return item;
+            });
+            
+            localStorage.setItem('wishlistItems', JSON.stringify(items));
+            loadItems();
         }
         
         // Item verwijderen
