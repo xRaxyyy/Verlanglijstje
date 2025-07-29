@@ -32,10 +32,51 @@
             line-height: 1.5;
         }
         
+        /* Loading screen styles */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--accent-light);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        
+        .loading-text {
+            font-size: 1.25rem;
+            color: var(--text-light);
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 2rem 1rem;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .container.loaded {
+            opacity: 1;
         }
         
         header {
@@ -469,7 +510,13 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Loading screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Laden...</div>
+    </div>
+
+    <div class="container" id="mainContainer">
         <header>
             <h1>Mijn Verlanglijst</h1>
             <p class="subtitle">Wat ik wil voor mijn verjaardag</p>
@@ -492,7 +539,7 @@
             <div class="form-grid">
                 <div class="form-group">
                     <label for="itemName">Productnaam</label>
-                    <input type="text" id="itemName" placeholder="Bijv. Draadlesse oortjes" required>
+                    <input type="text" id="itemName" placeholder="Bijv. Draadloze oortjes" required>
                 </div>
                 <div class="form-group">
                     <label for="itemImage">Afbeeldings-URL</label>
@@ -549,6 +596,8 @@
     
     // DOM elements
     const elements = {
+        loadingScreen: document.getElementById('loadingScreen'),
+        mainContainer: document.getElementById('mainContainer'),
         adminBadge: document.getElementById('adminBadge'),
         addItemForm: document.getElementById('addItemForm'),
         loginContainer: document.getElementById('loginContainer'),
@@ -597,7 +646,17 @@
             })
             .catch((error) => {
                 console.error("Anonymous login failed:", error);
+                hideLoadingScreen(); // Ensure loading screen hides even if login fails
             });
+    }
+    
+    // Hide loading screen and show content
+    function hideLoadingScreen() {
+        elements.loadingScreen.style.opacity = '0';
+        setTimeout(() => {
+            elements.loadingScreen.style.display = 'none';
+            elements.mainContainer.classList.add('loaded');
+        }, 500); // Match the transition duration
     }
     
     // Update purchased items visibility
@@ -698,6 +757,10 @@
             });
             
             renderItems(items);
+            hideLoadingScreen(); // Hide loading screen when items are loaded
+        }, (error) => {
+            console.error('Error loading items:', error);
+            hideLoadingScreen(); // Hide loading screen even if there's an error
         });
     }
     
