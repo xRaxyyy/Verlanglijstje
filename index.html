@@ -32,7 +32,6 @@
             line-height: 1.5;
         }
         
-        /* Loading screen styles */
         .loading-screen {
             position: fixed;
             top: 0;
@@ -224,6 +223,10 @@
             flex-direction: column;
         }
         
+        .shop-input-container {
+            position: relative;
+        }
+        
         label {
             margin-bottom: 0.5rem;
             font-size: 0.875rem;
@@ -231,7 +234,7 @@
             font-weight: 500;
         }
         
-        input {
+        input, select {
             padding: 0.75rem 1rem;
             border: 1px solid #e2e8f0;
             border-radius: 0.5rem;
@@ -241,7 +244,7 @@
             transition: all 0.2s ease;
         }
         
-        input:focus {
+        input:focus, select:focus {
             outline: none;
             border-color: var(--accent);
             box-shadow: 0 0 0 3px var(--accent-light);
@@ -276,10 +279,38 @@
         }
         
         .wishlist {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .shop-group {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+        }
+        
+        .shop-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .shop-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+        
+        .shop-items {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 1.5rem;
-            margin-top: 2rem;
         }
         
         .item-card {
@@ -474,6 +505,28 @@
             transform: translateY(-1px);
         }
         
+        .shop-suggestions {
+            position: absolute;
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0 0 0.5rem 0.5rem;
+            z-index: 10;
+            display: none;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        
+        .shop-suggestion {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+        }
+        
+        .shop-suggestion:hover {
+            background-color: #f1f5f9;
+        }
+        
         @media (min-width: 640px) {
             .item-actions .btn {
                 flex: 1 1 auto;
@@ -506,11 +559,14 @@
             .form-grid {
                 grid-template-columns: 1fr;
             }
+            
+            .shop-items {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Loading screen -->
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-spinner"></div>
         <div class="loading-text">Laden...</div>
@@ -549,6 +605,11 @@
                     <label for="itemPrice">Prijs (€)</label>
                     <input type="number" id="itemPrice" placeholder="99.99" step="0.01" required>
                 </div>
+                <div class="form-group shop-input-container">
+                    <label for="itemShop">Winkel</label>
+                    <input type="text" id="itemShop" placeholder="Bijv. Amazon, Bol.com, lokale winkel" required>
+                    <div id="shopSuggestions" class="shop-suggestions"></div>
+                </div>
                 <div class="form-group">
                     <label for="itemLink">Productlink (optioneel)</label>
                     <input type="text" id="itemLink" placeholder="https://voorbeeld.com/product">
@@ -560,7 +621,6 @@
         </div>
         
         <div class="wishlist" id="wishlist">
-            <!-- Items worden hier dynamisch toegevoegd -->
             <div class="empty-state" id="emptyState">
                 <div class="empty-icon">🎁</div>
                 <h3>Nog geen items</h3>
@@ -607,14 +667,17 @@
         itemName: document.getElementById('itemName'),
         itemImage: document.getElementById('itemImage'),
         itemPrice: document.getElementById('itemPrice'),
+        itemShop: document.getElementById('itemShop'),
         itemLink: document.getElementById('itemLink'),
-        togglePurchased: document.getElementById('togglePurchased')
+        togglePurchased: document.getElementById('togglePurchased'),
+        shopSuggestions: document.getElementById('shopSuggestions')
     };
     
     // Status
     let isAdmin = localStorage.getItem('wishlistAdmin') === 'true';
     let showPurchased = localStorage.getItem('showPurchased') === 'true';
     let currentUser = null;
+    let previousShops = [];
     
     // Initialize the UI
     function initUI() {
@@ -634,6 +697,9 @@
         elements.togglePurchased.checked = showPurchased;
         updatePurchasedVisibility();
         
+        // Load previous shops for autocomplete
+        loadPreviousShops();
+        
         // Anonymous login for Firebase
         auth.signInAnonymously()
             .then(() => {
@@ -646,7 +712,7 @@
             })
             .catch((error) => {
                 console.error("Anonymous login failed:", error);
-                hideLoadingScreen(); // Ensure loading screen hides even if login fails
+                hideLoadingScreen();
             });
     }
     
@@ -656,7 +722,7 @@
         setTimeout(() => {
             elements.loadingScreen.style.display = 'none';
             elements.mainContainer.classList.add('loaded');
-        }, 500); // Match the transition duration
+        }, 500);
     }
     
     // Update purchased items visibility
@@ -708,10 +774,11 @@
         const name = elements.itemName.value.trim();
         const image = elements.itemImage.value.trim();
         const price = parseFloat(elements.itemPrice.value);
+        const shop = elements.itemShop.value.trim();
         const link = elements.itemLink.value.trim();
         
         // Validation
-        if (!name || !image || isNaN(price)) {
+        if (!name || !image || isNaN(price) || !shop) {
             alert('Vul alle verplichte velden in!');
             return;
         }
@@ -727,6 +794,7 @@
                 name: name,
                 image: image,
                 price: price,
+                shop: shop,
                 link: link || '',
                 purchaseCount: 0,
                 purchasers: {},
@@ -734,15 +802,67 @@
                 addedBy: currentUser.uid
             });
             
+            // Add to previousShops if not already there
+            if (!previousShops.includes(shop.toLowerCase())) {
+                previousShops.push(shop.toLowerCase());
+            }
+            
             // Reset form
             elements.itemName.value = '';
             elements.itemImage.value = '';
             elements.itemPrice.value = '';
+            elements.itemShop.value = '';
             elements.itemLink.value = '';
         } catch (error) {
             console.error('Error adding item:', error);
             alert('Er is een fout opgetreden bij het opslaan van het item');
         }
+    }
+    
+    // Load previous shops for autocomplete
+    function loadPreviousShops() {
+        database.ref('wishlist').once('value').then((snapshot) => {
+            const shops = new Set();
+            snapshot.forEach((childSnapshot) => {
+                const shop = childSnapshot.val().shop;
+                if (shop) {
+                    shops.add(shop.toLowerCase());
+                }
+            });
+            previousShops = Array.from(shops);
+        });
+    }
+    
+    // Show shop suggestions based on input
+    function showShopSuggestions(input) {
+        elements.shopSuggestions.innerHTML = '';
+        
+        if (!input || input.length < 2) {
+            elements.shopSuggestions.style.display = 'none';
+            return;
+        }
+        
+        const filtered = previousShops.filter(shop => 
+            shop.includes(input.toLowerCase())
+        );
+        
+        if (filtered.length === 0) {
+            elements.shopSuggestions.style.display = 'none';
+            return;
+        }
+        
+        filtered.forEach(shop => {
+            const suggestion = document.createElement('div');
+            suggestion.className = 'shop-suggestion';
+            suggestion.textContent = shop;
+            suggestion.addEventListener('click', () => {
+                elements.itemShop.value = shop;
+                elements.shopSuggestions.style.display = 'none';
+            });
+            elements.shopSuggestions.appendChild(suggestion);
+        });
+        
+        elements.shopSuggestions.style.display = 'block';
     }
     
     // Load items from Firebase
@@ -757,14 +877,14 @@
             });
             
             renderItems(items);
-            hideLoadingScreen(); // Hide loading screen when items are loaded
+            hideLoadingScreen();
         }, (error) => {
             console.error('Error loading items:', error);
-            hideLoadingScreen(); // Hide loading screen even if there's an error
+            hideLoadingScreen();
         });
     }
     
-    // Render items
+    // Render items grouped by shop
     function renderItems(items) {
         if (items.length === 0) {
             elements.wishlist.innerHTML = '';
@@ -773,41 +893,75 @@
             return;
         }
         
+        // Group items by shop
+        const shops = {};
+        items.forEach(item => {
+            const shop = item.shop || 'Anders';
+            if (!shops[shop]) {
+                shops[shop] = [];
+            }
+            shops[shop].push(item);
+        });
+        
         elements.wishlist.innerHTML = '';
         
-        items.forEach((item) => {
-            const hasPurchases = item.purchaseCount > 0;
-            const isOwner = currentUser && item.addedBy === currentUser.uid;
+        // Sort shops alphabetically
+        const sortedShops = Object.keys(shops).sort();
+        
+        sortedShops.forEach(shopName => {
+            const shopItems = shops[shopName];
             
-            const itemElement = document.createElement('div');
-            itemElement.className = `item-card ${hasPurchases ? 'has-purchases' : ''}`;
-            itemElement.innerHTML = `
-                <div class="item-image-container">
-                    <img src="${item.image}" alt="${item.name}" class="item-image" onerror="this.src='https://via.placeholder.com/400?text=Geen+afbeelding'">
-                    ${hasPurchases ? `<div class="purchase-count">${item.purchaseCount} ${item.purchaseCount === 1 ? 'keer' : 'keer'}</div>` : ''}
-                    ${(isOwner || isAdmin) ? `
-                    <div class="admin-actions">
-                        <button class="delete-btn" onclick="deleteItem('${item.id}', event)" title="Verwijderen">
-                            ✕
-                        </button>
+            const shopGroup = document.createElement('div');
+            shopGroup.className = 'shop-group';
+            
+            const shopHeader = document.createElement('div');
+            shopHeader.className = 'shop-header';
+            shopHeader.innerHTML = `<h2 class="shop-name">${shopName}</h2>`;
+            
+            const shopItemsContainer = document.createElement('div');
+            shopItemsContainer.className = 'shop-items';
+            
+            shopGroup.appendChild(shopHeader);
+            shopGroup.appendChild(shopItemsContainer);
+            elements.wishlist.appendChild(shopGroup);
+            
+            // Sort items by name
+            shopItems.sort((a, b) => a.name.localeCompare(b.name));
+            
+            shopItems.forEach((item) => {
+                const hasPurchases = item.purchaseCount > 0;
+                const isOwner = currentUser && item.addedBy === currentUser.uid;
+                
+                const itemElement = document.createElement('div');
+                itemElement.className = `item-card ${hasPurchases ? 'has-purchases' : ''}`;
+                itemElement.innerHTML = `
+                    <div class="item-image-container">
+                        <img src="${item.image}" alt="${item.name}" class="item-image" onerror="this.src='https://via.placeholder.com/400?text=Geen+afbeelding'">
+                        ${hasPurchases ? `<div class="purchase-count">${item.purchaseCount} ${item.purchaseCount === 1 ? 'keer' : 'keer'}</div>` : ''}
+                        ${(isOwner || isAdmin) ? `
+                        <div class="admin-actions">
+                            <button class="delete-btn" onclick="deleteItem('${item.id}', event)" title="Verwijderen">
+                                ✕
+                            </button>
+                        </div>
+                        ` : ''}
                     </div>
-                    ` : ''}
-                </div>
-                <div class="item-content">
-                    <h3 class="item-title">${item.name}</h3>
-                    <div class="item-price">€${item.price.toFixed(2)}</div>
-                    <div class="item-actions">
-                        <button class="btn purchase-btn" onclick="incrementPurchaseCount('${item.id}')">
-                            +1 Koper
-                        </button>
-                        <button class="btn unpurchase-btn" onclick="decrementPurchaseCount('${item.id}', event)">
-                            -1 Koper
-                        </button>
-                        <a href="${item.link || '#'}" target="_blank" class="btn btn-link ${!item.link ? 'hidden' : ''}">Bekijk</a>
+                    <div class="item-content">
+                        <h3 class="item-title">${item.name}</h3>
+                        <div class="item-price">€${item.price.toFixed(2)}</div>
+                        <div class="item-actions">
+                            <button class="btn purchase-btn" onclick="incrementPurchaseCount('${item.id}')">
+                                +1 Koper
+                            </button>
+                            <button class="btn unpurchase-btn" onclick="decrementPurchaseCount('${item.id}', event)">
+                                -1 Koper
+                            </button>
+                            <a href="${item.link || '#'}" target="_blank" class="btn btn-link ${!item.link ? 'hidden' : ''}">Bekijk</a>
+                        </div>
                     </div>
-                </div>
-            `;
-            elements.wishlist.appendChild(itemElement);
+                `;
+                shopItemsContainer.appendChild(itemElement);
+            });
         });
     }
     
@@ -872,7 +1026,7 @@
         const snapshot = await itemRef.once('value');
         const item = snapshot.val();
         
-        // Controleer of gebruiker admin is OF eigenaar van het item
+        // Check if user is admin OR owner of the item
         if (!isAdmin && (!item || item.addedBy !== currentUser.uid)) {
             alert('Alleen beheerders of de eigenaar kunnen items verwijderen');
             return;
@@ -888,6 +1042,21 @@
             console.error('Error deleting item:', error);
         }
     }
+    
+    // Event listeners for shop suggestions
+    elements.itemShop.addEventListener('input', (e) => {
+        showShopSuggestions(e.target.value);
+    });
+    
+    elements.itemShop.addEventListener('focus', (e) => {
+        showShopSuggestions(e.target.value);
+    });
+    
+    document.addEventListener('click', (e) => {
+        if (e.target.id !== 'itemShop') {
+            elements.shopSuggestions.style.display = 'none';
+        }
+    });
 </script>
 </body>
 </html>
