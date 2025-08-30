@@ -674,8 +674,9 @@
         
     // Status
     let isAdmin = localStorage.getItem('wishlistAdmin') === 'true';
-    let showPurchased = localStorage.getItem('showPurchased') === 'true' || false; // Default to false but will be overridden below
+    let showPurchased = localStorage.getItem('showPurchased') === 'true';
     let currentUser = null;
+    let previousShops = []; 
 
     // Initialize the UI
     function initUI() {
@@ -711,6 +712,7 @@
                 auth.onAuthStateChanged((user) => {
                     if (user) {
                         currentUser = user;
+                        loadPreviousShops();
                         loadItems();
                     }
                 });
