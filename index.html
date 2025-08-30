@@ -1046,21 +1046,6 @@
             console.error('Error deleting item:', error);
         }
     }
-    
-    // Event listeners for shop suggestions
-    elements.itemShop.addEventListener('input', (e) => {
-        showShopSuggestions(e.target.value);
-    });
-    
-    elements.itemShop.addEventListener('focus', (e) => {
-        showShopSuggestions(e.target.value);
-    });
-    
-    document.addEventListener('click', (e) => {
-        if (e.target.id !== 'itemShop') {
-            elements.shopSuggestions.style.display = 'none';
-        }
-    });
 </script>
 </body>
 </html>
